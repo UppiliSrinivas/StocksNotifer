@@ -48,27 +48,29 @@ def fetch_stock(symbol):
         meta = chart['meta']
         quote = chart['indicators']['quote'][0]
         
-        # Check if quote data is available
-        if not quote.get('close') or not quote['close'] or quote['close'][-1] is None:
-            print(f"No quote data available for {symbol}")
+        # Extract OHLC arrays
+        opens = quote.get('open', [])
+        highs = quote.get('high', [])
+        lows = quote.get('low', [])
+        
+        # Filter out None values
+        opens_clean = [x for x in opens if x is not None]
+        highs_clean = [x for x in highs if x is not None]
+        lows_clean = [x for x in lows if x is not None]
+        
+        # Get day's values: first open, max high, min low
+        if not opens_clean or not highs_clean or not lows_clean:
+            print(f"Incomplete OHLC data for {symbol}")
             return None
         
-        # Get the latest data (last item)
-        close = quote['close'][-1]
-        open_price = quote['open'][-1] if quote.get('open') and quote['open'] else close
-        high = quote['high'][-1] if quote.get('high') and quote['high'] else close
-        low = quote['low'][-1] if quote.get('low') and quote['low'] else close
-        volume = quote['volume'][-1] if quote.get('volume') and quote['volume'] else 0
-        
-        if close is None:
-            return None
-        
+        open_price = opens_clean[0]  # First open of the day
+        day_high = max(highs_clean)  # Highest price of the day
+        day_low = min(lows_clean)    # Lowest price of the day
+
         return {
-            "price": round(close, 2),
             "open": round(open_price, 2),
-            "high": round(high, 2),
-            "low": round(low, 2),
-            "volume": int(volume),
+            "high": round(day_high, 2),
+            "low": round(day_low, 2),
             "datetime": time.strftime("%d-%m-%Y:%H:%M:%S", time.localtime(meta['regularMarketTime']))
         }
     except requests.exceptions.JSONDecodeError as e:
